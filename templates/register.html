@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}ลงทะเบียน - TikTok 4K Downloader{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-user-plus"></i> ลงทะเบียน
+            </h3>
+            
+            <form id="registerForm">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" id="username" class="form-control" placeholder="username (3-20 ตัวอักษร)" required>
+                    <small class="text-muted">ตัวอักษร, ตัวเลข, และ _ เท่านั้น</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" id="email" class="form-control" placeholder="email@example.com" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">รหัสผ่าน</label>
+                    <input type="password" id="password" class="form-control" placeholder="อย่างน้อย 8 ตัวอักษร" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="confirmPassword" class="form-label">ยืนยันรหัสผ่าน</label>
+                    <input type="password" id="confirmPassword" class="form-control" placeholder="ยืนยันรหัสผ่าน" required>
+                </div>
+                
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fas fa-user-plus"></i> ลงทะเบียน
+                </button>
+            </form>
+            
+            <div class="text-center mt-3">
+                <a href="{{ url_for('auth.login') }}">มีบัญชีแล้ว? เข้าสู่ระบบ</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังลงทะเบียน...';
+    
+    try {
+        const response = await fetch('/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: document.getElementById('username').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                password: document.getElementById('password').value,
+                confirm_password: document.getElementById('confirmPassword').value
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await Swal.fire('สำเร็จ!', 'ลงทะเบียนเรียบร้อย กรุณาเข้าสู่ระบบ', 'success');
+            window.location.href = data.redirect || '/auth/login';
+        } else {
+            await Swal.fire('Error!', data.error || 'Registration failed', 'error');
+        }
+    } catch (error) {
+        await Swal.fire('Error!', error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-user-plus"></i> ลงทะเบียน';
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - TikTok 4K Downloader{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="fas fa-chart-bar"></i> Dashboard</h2>
+
+<!-- Stats -->
+<div class="row g-4 mb-4" id="statsContainer">
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon">📥</div>
+            <div id="statDownloads" class="stat-number">-</div>
+            <div class="stat-label">ดาวน์โหลดทั้งหมด</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon">💾</div>
+            <div id="statSize" class="stat-number">-</div>
+            <div class="stat-label">พื้นที่ใช้งาน</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div id="statRecent" class="stat-number">-</div>
+            <div class="stat-label">7 วันที่ผ่านมา</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon">🏆</div>
+            <div id="statTotal" class="stat-number">-</div>
+            <div class="stat-label">ไฟล์ทั้งหมด</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quality Chart -->
+<div class="card-custom mb-4">
+    <h5 class="mb-3"><i class="fas fa-chart-pie"></i> คุณภาพที่ดาวน์โหลด</h5>
+    <div id="qualityChart" style="height: 200px;">
+        <div class="d-flex justify-content-center align-items-center h-100">
+            <p class="text-muted">Loading chart...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Downloads -->
+<div class="card-custom">
+    <h5 class="mb-3"><i class="fas fa-history"></i> ประวัติล่าสุด</h5>
+    <div id="recentDownloads">
+        <p class="text-muted">กำลังโหลด...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        // Load stats
+        const statsRes = await fetch('/api/stats');
+        const statsData = await statsRes.json();
+        
+        if (statsData.success) {
+            const data = statsData.data;
+            document.getElementById('statDownloads').textContent = data.total_downloads || 0;
+            document.getElementById('statSize').textContent = formatFileSize(data.total_size || 0);
+            document.getElementById('statRecent').textContent = data.recent_downloads || 0;
+            document.getElementById('statTotal').textContent = data.total_downloads || 0;
+            
+            // Quality chart
+            const qualityStats = data.quality_stats || {};
+            const labels = Object.keys(qualityStats);
+            const values = Object.values(qualityStats);
+            
+            if (labels.length > 0) {
+                const chartHtml = labels.map((label, i) => `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
+                        <span>${label}</span>
+                        <span class="badge bg-primary">${values[i]} ไฟล์</span>
+                    </div>
+                `).join('');
+                document.getElementById('qualityChart').innerHTML = chartHtml;
+            }
+        }
+        
+        // Load recent downloads
+        const historyRes = await fetch('/api/history?page=1&per_page=5');
+        const historyData = await historyRes.json();
+        
+        if (historyData.success && historyData.data.items.length > 0) {
+            const html = historyData.data.items.map(item => `
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
+                    <div>
+                        <strong>${item.title || 'Untitled'}</strong>
+                        <small class="d-block text-muted">👤 ${item.author || 'Unknown'}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge ${item.quality === '4K' ? 'badge-4k' : 'bg-secondary'}">${item.quality}</span>
+                        <small class="d-block text-muted">${formatFileSize(item.file_size)}</small>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('recentDownloads').innerHTML = html;
+        } else {
+            document.getElementById('recentDownloads').innerHTML = `
+                <p class="text-muted text-center py-4">ยังไม่มีประวัติการดาวน์โหลด</p>
+            `;
+        }
+        
+    } catch (error) {
+        console.error('Dashboard error:', error);
+    }
+});
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let unit = 0;
+    while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit++;
+    }
+    return `${size.toFixed(1)} ${units[unit]}`;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}TikTok 4K Downloader - ดาวน์โหลดวิดีโอคุณภาพสูง{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1>
+        <i class="fas fa-video"></i>
+        TikTok <span class="highlight">4K</span> Downloader
+    </h1>
+    <p>
+        ดาวน์โหลดวิดีโอ TikTok คุณภาพสูงสุด <span class="highlight">ไม่มีลายน้ำ</span>
+        รองรับการแปลงเป็น <span class="highlight">4K</span> ด้วย AI Upscale
+    </p>
+    
+    <!-- Download Form -->
+    <div class="download-form">
+        <div class="input-group">
+            <input type="text" 
+                   id="tiktokUrl" 
+                   class="form-control" 
+                   placeholder="🔗 วางลิงก์ TikTok ที่นี่...">
+            <button id="downloadBtn" class="btn-download">
+                <i class="fas fa-download"></i> ดาวน์โหลด
+            </button>
+        </div>
+        
+        <!-- Quality Selector -->
+        <div class="quality-selector mt-3">
+            <button class="quality-btn active" data-quality="4K" data-method="lanczos">
+                🎬 4K <span class="badge-4k">AI</span>
+            </button>
+            <button class="quality-btn" data-quality="1080p">
+                📺 1080p
+            </button>
+            <button class="quality-btn" data-quality="720p">
+                📱 720p
+            </button>
+        </div>
+        
+        <!-- API Selector -->
+        <div class="api-selector mt-2">
+            <button class="api-btn active" data-api="tikwm">
+                TikWM
+            </button>
+            <button class="api-btn" data-api="ssstik">
+                SSSTik
+            </button>
+            <button class="api-btn" data-api="tikmate">
+                TikMate
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Video Preview -->
+<div id="videoPreview" class="video-preview">
+    <div class="row align-items-center">
+        <div class="col-md-4">
+            <img id="previewThumbnail" class="thumbnail" src="/static/images/default-thumb.jpg" alt="Thumbnail">
+        </div>
+        <div class="col-md-8 video-info">
+            <h5 id="previewTitle" class="video-title">Title</h5>
+            <p id="previewAuthor" class="video-author">👤 Author</p>
+            <div class="d-flex gap-3">
+                <span id="previewDuration" class="badge bg-secondary">⏱️ 0:00</span>
+                <span id="previewQuality" class="badge bg-info">📊 1080p</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress -->
+<div id="progressContainer" class="progress-container">
+    <div class="progress-bar-custom">
+        <div id="progressFill" class="progress-fill"></div>
+    </div>
+    <p id="progressText" class="progress-text">กำลังดาวน์โหลด...</p>
+</div>
+
+<!-- Download Result -->
+<div id="downloadResult"></div>
+
+<!-- Features -->
+<div class="row g-4 mt-4">
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon">🎬</div>
+            <div class="stat-number">4K</div>
+            <div class="stat-label">คุณภาพสูงสุด</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon">🚀</div>
+            <div class="stat-number">3</div>
+            <div class="stat-label">API รองรับ</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon">🔒</div>
+            <div class="stat-number">100%</div>
+            <div class="stat-label">ปลอดภัย</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon">📱</div>
+            <div class="stat-number">ทุกที่</div>
+            <div class="stat-label">ใช้งานได้ทุกอุปกรณ์</div>
+        </div>
+    </div>
+</div>
+
+<!-- How to use -->
+<div class="card-custom mt-4">
+    <h5 class="mb-3"><i class="fas fa-question-circle"></i> วิธีการใช้งาน</h5>
+    <ol class="mb-0">
+        <li>📋 คัดลอกลิงก์วิดีโอ TikTok ที่ต้องการ</li>
+        <li>🔗 วางลิงก์ในช่องด้านบน</li>
+        <li>🎬 เลือกคุณภาพที่ต้องการ (แนะนำ 4K)</li>
+        <li>⬇️ กดปุ่มดาวน์โหลด รอสักครู่</li>
+        <li>✅ ดาวน์โหลดไฟล์วิดีโอคุณภาพสูง!</li>
+    </ol>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}ประวัติการดาวน์โหลด - TikTok 4K Downloader{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-history"></i> ประวัติการดาวน์โหลด</h2>
+    <button id="clearHistoryBtn" class="btn btn-danger btn-sm">
+        <i class="fas fa-trash"></i> ล้างทั้งหมด
+    </button>
+</div>
+
+<!-- Search -->
+<div class="mb-3">
+    <input type="text" id="searchHistory" class="form-control" placeholder="🔍 ค้นหาประวัติ..." style="max-width: 300px;">
+</div>
+
+<!-- History Table -->
+<div id="historyContainer">
+    <div class="text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+<nav id="paginationContainer" class="mt-3">
+    <ul class="pagination justify-content-center"></ul>
+</nav>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+const perPage = 10;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadHistory();
+    
+    document.getElementById('searchHistory').addEventListener('input', debounce(function() {
+        currentPage = 1;
+        loadHistory();
+    }, 500));
+    
+    document.getElementById('clearHistoryBtn').addEventListener('click', async function() {
+        const confirmed = await Swal.fire({
+            title: 'ยืนยันการล้างประวัติ?',
+            text: 'คุณแน่ใจว่าต้องการล้างประวัติทั้งหมด? ไฟล์ที่ดาวน์โหลดจะถูกลบด้วย',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ใช่, ล้างทั้งหมด',
+            cancelButtonText: 'ยกเลิก'
+        });
+        
+        if (confirmed.isConfirmed) {
+            try {
+                const response = await fetch('/api/clear-history', { method: 'DELETE' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    await Swal.fire('สำเร็จ!', 'ล้างประวัติทั้งหมดเรียบร้อย', 'success');
+                    loadHistory();
+                }
+            } catch (error) {
+                await Swal.fire('Error!', 'เกิดข้อผิดพลาด', 'error');
+            }
+        }
+    });
+});
+
+async function loadHistory() {
+    const search = document.getElementById('searchHistory').value.trim();
+    
+    try {
+        let url = `/api/history?page=${currentPage}&per_page=${perPage}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderHistory(data.data);
+            renderPagination(data.data);
+        } else {
+            document.getElementById('historyContainer').innerHTML = `
+                <div class="alert alert-danger">${data.error || 'Failed to load history'}</div>
+            `;
+        }
+        
+    } catch (error) {
+        document.getElementById('historyContainer').innerHTML = `
+            <div class="alert alert-danger">เกิดข้อผิดพลาด: ${error.message}</div>
+        `;
+    }
+}
+
+function renderHistory(data) {
+    const container = document.getElementById('historyContainer');
+    
+    if (!data.items || data.items.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">ยังไม่มีประวัติการดาวน์โหลด</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const html = `
+        <div class="table-responsive">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>ชื่อไฟล์</th>
+                        <th>ผู้สร้าง</th>
+                        <th>คุณภาพ</th>
+                        <th>ขนาด</th>
+                        <th>วันที่</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.items.map(item => `
+                        <tr>
+                            <td>
+                                <strong>${item.title || 'Untitled'}</strong>
+                                <small class="d-block text-muted">${item.filename}</small>
+                            </td>
+                            <td>${item.author || 'Unknown'}</td>
+                            <td>
+                                <span class="badge-quality ${item.quality === '4K' ? 'badge-4k' : item.quality === '1080p' ? 'badge-1080p' : 'badge-720p'}">
+                                    ${item.quality}
+                                </span>
+                            </td>
+                            <td>${formatFileSize(item.file_size)}</td>
+                            <td>${formatDate(item.created_at)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteHistory(${item.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function renderPagination(data) {
+    const container = document.getElementById('paginationContainer');
+    if (data.pages <= 1) {
+        container.querySelector('ul').innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    for (let i = 1; i <= data.pages; i++) {
+        html += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>
+            </li>
+        `;
+    }
+    
+    container.querySelector('ul').innerHTML = html;
+}
+
+function goToPage(page) {
+    currentPage = page;
+    loadHistory();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deleteHistory(id) {
+    const confirmed = await Swal.fire({
+        title: 'ยืนยันการลบ?',
+        text: 'คุณต้องการลบประวัตินี้และไฟล์ที่เกี่ยวข้อง?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ใช่, ลบ',
+        cancelButtonText: 'ยกเลิก'
+    });
+    
+    if (confirmed.isConfirmed) {
+        try {
+            const response = await fetch(`/api/delete-history/${id}`, { method: 'DELETE' });
+            const data = await response.json();
+            
+            if (data.success) {
+                await Swal.fire('ลบสำเร็จ!', '', 'success');
+                loadHistory();
+            } else {
+                await Swal.fire('Error!', data.error || 'Failed to delete', 'error');
+            }
+        } catch (error) {
+            await Swal.fire('Error!', error.message, 'error');
+        }
+    }
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let unit = 0;
+    while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit++;
+    }
+    return `${size.toFixed(1)} ${units[unit]}`;
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('th-TH') + ' ' + date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}ตั้งค่า - TikTok 4K Downloader{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="fas fa-cog"></i> ตั้งค่า</h2>
+
+<form id="settingsForm" class="card-custom">
+    <div class="row g-4">
+        <!-- Default Quality -->
+        <div class="col-md-6">
+            <div class="settings-group">
+                <label><i class="fas fa-video"></i> คุณภาพเริ่มต้น</label>
+                <select id="defaultQuality" class="form-select">
+                    <option value="4K">4K (AI Upscale)</option>
+                    <option value="1080p">1080p HD</option>
+                    <option value="720p">720p</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Default API -->
+        <div class="col-md-6">
+            <div class="settings-group">
+                <label><i class="fas fa-code-branch"></i> API เริ่มต้น</label>
+                <select id="defaultApi" class="form-select">
+                    <option value="tikwm">TikWM (แนะนำ)</option>
+                    <option value="ssstik">SSSTik.io</option>
+                    <option value="tikmate">TikMate.cc</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Upscale Method -->
+        <div class="col-md-6">
+            <div class="settings-group">
+                <label><i class="fas fa-magic"></i> วิธีการ Upscale 4K</label>
+                <select id="upscaleMethod" class="form-select">
+                    <option value="lanczos">Lanczos (เร็ว)</option>
+                    <option value="spline">Spline (คุณภาพดี)</option>
+                    <option value="gpu">GPU Acceleration (ถ้ามี)</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Dark Mode -->
+        <div class="col-md-6">
+            <div class="settings-group">
+                <label><i class="fas fa-moon"></i> โหมดกลางคืน</label>
+                <div class="form-check form-switch">
+                    <input id="darkModeToggle" class="form-check-input" type="checkbox" role="switch">
+                    <label class="form-check-label" for="darkModeToggle">เปิดใช้งานโหมดกลางคืน</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auto Download -->
+        <div class="col-md-6">
+            <div class="settings-group">
+                <label><i class="fas fa-play"></i> ดาวน์โหลดอัตโนมัติ</label>
+                <div class="form-check form-switch">
+                    <input id="autoDownload" class="form-check-input" type="checkbox" role="switch">
+                    <label class="form-check-label" for="autoDownload">ดาวน์โหลดทันทีเมื่อวางลิงก์</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notifications -->
+        <div class="col-md-6">
+            <div class="settings-group">
+                <label><i class="fas fa-bell"></i> การแจ้งเตือน</label>
+                <div class="form-check form-switch">
+                    <input id="notifyComplete" class="form-check-input" type="checkbox" role="switch">
+                    <label class="form-check-label" for="notifyComplete">แจ้งเตือนเมื่อดาวน์โหลดเสร็จ</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> บันทึกการตั้งค่า
+        </button>
+        <button type="button" id="resetSettings" class="btn btn-outline-secondary ms-2">
+            <i class="fas fa-undo"></i> คืนค่าเริ่มต้น
+        </button>
+    </div>
+</form>
+
+<!-- Account Info -->
+<div class="card-custom mt-4">
+    <h5 class="mb-3"><i class="fas fa-user"></i> ข้อมูลบัญชี</h5>
+    <div class="row">
+        <div class="col-md-6">
+            <p><strong>Username:</strong> {{ current_user.username }}</p>
+            <p><strong>Email:</strong> {{ current_user.email }}</p>
+            <p><strong>ดาวน์โหลดทั้งหมด:</strong> {{ current_user.total_downloads }} ไฟล์</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <button id="changePasswordBtn" class="btn btn-outline-primary">
+                <i class="fas fa-key"></i> เปลี่ยนรหัสผ่าน
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    // Load settings
+    try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        
+        if (data.success) {
+            const settings = data.data;
+            document.getElementById('defaultQuality').value = settings.default_quality || '4K';
+            document.getElementById('defaultApi').value = settings.default_api || 'tikwm';
+            document.getElementById('upscaleMethod').value = settings.upscale_method || 'lanczos';
+            document.getElementById('darkModeToggle').checked = settings.dark_mode || false;
+            document.getElementById('autoDownload').checked = settings.auto_download || false;
+            document.getElementById('notifyComplete').checked = settings.notify_complete || false;
+        }
+    } catch (error) {
+        console.error('Failed to load settings:', error);
+    }
+    
+    // Save settings
+    document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const settings = {
+            default_quality: document.getElementById('defaultQuality').value,
+            default_api: document.getElementById('defaultApi').value,
+            upscale_method: document.getElementById('upscaleMethod').value,
+            dark_mode: document.getElementById('darkModeToggle').checked,
+            auto_download: document.getElementById('autoDownload').checked,
+            notify_complete: document.getElementById('notifyComplete').checked
+        };
+        
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                await Swal.fire('บันทึกสำเร็จ!', 'การตั้งค่าถูกบันทึกเรียบร้อย', 'success');
+            } else {
+                await Swal.fire('Error!', data.error || 'Failed to save settings', 'error');
+            }
+        } catch (error) {
+            await Swal.fire('Error!', error.message, 'error');
+        }
+    });
+    
+    // Reset settings
+    document.getElementById('resetSettings').addEventListener('click', async function() {
+        const confirmed = await Swal.fire({
+            title: 'ยืนยันการคืนค่า?',
+            text: 'คุณแน่ใจว่าต้องการคืนค่าการตั้งค่าทั้งหมด?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ใช่, คืนค่า',
+            cancelButtonText: 'ยกเลิก'
+        });
+        
+        if (confirmed.isConfirmed) {
+            document.getElementById('defaultQuality').value = '4K';
+            document.getElementById('defaultApi').value = 'tikwm';
+            document.getElementById('upscaleMethod').value = 'lanczos';
+            document.getElementById('darkModeToggle').checked = false;
+            document.getElementById('autoDownload').checked = false;
+            document.getElementById('notifyComplete').checked = false;
+            
+            // Apply dark mode
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+            document.body.classList.remove('dark-mode');
+            document.body.classList.add('light-mode');
+            
+            await Swal.fire('คืนค่าสำเร็จ!', '', 'success');
+        }
+    });
+    
+    // Change password
+    document.getElementById('changePasswordBtn').addEventListener('click', async function() {
+        const { value: formValues } = await Swal.fire({
+            title: 'เปลี่ยนรหัสผ่าน',
+            html: `
+                <input type="password" id="oldPassword" class="swal2-input" placeholder="รหัสผ่านเดิม">
+                <input type="password" id="newPassword" class="swal2-input" placeholder="รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)">
+                <input type="password" id="confirmPassword" class="swal2-input" placeholder="ยืนยันรหัสผ่านใหม่">
+            `,
+            confirmButtonText: 'เปลี่ยนรหัสผ่าน',
+            showCancelButton: true,
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const oldPassword = document.getElementById('oldPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                
+                if (!oldPassword || !newPassword || !confirmPassword) {
+                    Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบ');
+                    return;
+                }
+                
+                if (newPassword.length < 8) {
+                    Swal.showValidationMessage('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+                    return;
+                }
+                
+                if (newPassword !== confirmPassword) {
+                    Swal.showValidationMessage('รหัสผ่านไม่ตรงกัน');
+                    return;
+                }
+                
+                return { oldPassword, newPassword };
+            }
+        });
+        
+        if (formValues) {
+            try {
+                const response = await fetch('/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        old_password: formValues.oldPassword,
+                        new_password: formValues.newPassword,
+                        confirm_password: formValues.newPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    await Swal.fire('สำเร็จ!', 'เปลี่ยนรหัสผ่านเรียบร้อย', 'success');
+                } else {
+                    await Swal.fire('Error!', data.error || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                await Swal.fire('Error!', error.message, 'error');
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
